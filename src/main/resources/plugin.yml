@@ -1,0 +1,13 @@
+name: DpkgRegion
+version: 1.0
+main: com.debianrose.Main
+api: ["1.0.0"]
+commands:
+  rg:
+    description: Manage regions.
+    usage: /rg create <Name>
+    permission: dpkgregion.command.rg
+permissions:
+  dpkgregion.command.rg:
+    description: Allows usage of the /rg command.
+    default: op
