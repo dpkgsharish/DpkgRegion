@@ -1,4 +1,4 @@
-package com.debianrose.dpkgregion;
+package com.debianrose;
 
 import cn.nukkit.Player;
 import cn.nukkit.event.EventHandler;
@@ -10,7 +10,7 @@ import cn.nukkit.event.player.PlayerToggleSneakEvent;
 import cn.nukkit.plugin.PluginBase;
 import cn.nukkit.command.Command;
 import cn.nukkit.command.CommandSender;
-import cn.nukkit.level.Position;
+import cn.nukkit.level.Location;
 import cn.nukkit.level.particle.DustParticle;
 import cn.nukkit.math.Vector3;
 import cn.nukkit.utils.TextFormat;
@@ -21,8 +21,8 @@ import java.util.Map;
 public class Main extends PluginBase implements Listener {
 
     private final Map<String, Region> regions = new HashMap<>();
-    private final Map<Player, Position> pos1Map = new HashMap<>();
-    private final Map<Player, Position> pos2Map = new HashMap<>();
+    private final Map<Player, Location> pos1Map = new HashMap<>();
+    private final Map<Player, Location> pos2Map = new HashMap<>();
     private final Map<Player, String> creatingRegions = new HashMap<>();
 
     @Override
@@ -41,15 +41,14 @@ public class Main extends PluginBase implements Listener {
         Player player = event.getPlayer();
         if (creatingRegions.containsKey(player)) {
             if (event.getAction() == PlayerInteractEvent.Action.LEFT_CLICK_BLOCK) {
-                pos1Map.put(player, event.getBlock().getPosition());
-                player.sendMessage(TextFormat.GREEN + "Position 1 set: " + event.getBlock().getPosition());
+                pos1Map.put(player, event.getBlock().getLocation());
+                player.sendMessage(TextFormat.GREEN + "Position 1 set: " + event.getBlock().getLocation());
                 event.setCancelled(true);
             } else if (event.getAction() == PlayerInteractEvent.Action.RIGHT_CLICK_BLOCK) {
-                pos2Map.put(player, event.getBlock().getPosition());
-                player.sendMessage(TextFormat.GREEN + "Position 2 set: " + event.getBlock().getPosition());
+                pos2Map.put(player, event.getBlock().getLocation());
+                player.sendMessage(TextFormat.GREEN + "Position 2 set: " + event.getBlock().getLocation());
                 event.setCancelled(true);
 
-                // Отображаем границы региона
                 if (pos1Map.containsKey(player) && pos2Map.containsKey(player)) {
                     showRegionBoundaries(player, pos1Map.get(player), pos2Map.get(player));
                 }
@@ -60,7 +59,7 @@ public class Main extends PluginBase implements Listener {
     @EventHandler
     public void onSneak(PlayerToggleSneakEvent event) {
         Player player = event.getPlayer();
-        if (creatingRegions.containsKey(player) {
+        if (creatingRegions.containsKey(player)) {
             if (event.isSneaking()) {
                 if (pos1Map.containsKey(player) && pos2Map.containsKey(player)) {
                     createRegion(player, creatingRegions.get(player));
@@ -76,7 +75,7 @@ public class Main extends PluginBase implements Listener {
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
-        if (!canBuild(player, event.getBlock().getPosition())) {
+        if (!canBuild(player, event.getBlock().getLocation())) {
             event.setCancelled(true);
             player.sendMessage(TextFormat.RED + "You cannot break blocks in this region!");
         }
@@ -85,7 +84,7 @@ public class Main extends PluginBase implements Listener {
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
-        if (!canBuild(player, event.getBlock().getPosition())) {
+        if (!canBuild(player, event.getBlock().getLocation())) {
             event.setCancelled(true);
             player.sendMessage(TextFormat.RED + "You cannot place blocks in this region!");
         }
@@ -125,8 +124,8 @@ public class Main extends PluginBase implements Listener {
     }
 
     private void createRegion(Player player, String name) {
-        Position pos1 = pos1Map.get(player);
-        Position pos2 = pos2Map.get(player);
+        Location pos1 = pos1Map.get(player);
+        Location pos2 = pos2Map.get(player);
 
         if (pos1 == null || pos2 == null) {
             player.sendMessage(TextFormat.RED + "Please set both positions first!");
@@ -136,23 +135,22 @@ public class Main extends PluginBase implements Listener {
         regions.put(name, new Region(name, pos1, pos2));
         player.sendMessage(TextFormat.GREEN + "Region created: " + name);
 
-        // Очищаем временные данные
         pos1Map.remove(player);
         pos2Map.remove(player);
     }
 
-    private boolean canBuild(Player player, Position pos) {
+    private boolean canBuild(Player player, Location location) {
         if (player.isOp()) return true;
 
         for (Region region : regions.values()) {
-            if (region.contains(pos)) {
+            if (region.contains(location)) {
                 return false;
             }
         }
         return true;
     }
 
-    private void showRegionBoundaries(Player player, Position pos1, Position pos2) {
+    private void showRegionBoundaries(Player player, Location pos1, Location pos2) {
         double minX = Math.min(pos1.getX(), pos2.getX());
         double maxX = Math.max(pos1.getX(), pos2.getX());
         double minY = Math.min(pos1.getY(), pos2.getY());
@@ -160,7 +158,6 @@ public class Main extends PluginBase implements Listener {
         double minZ = Math.min(pos1.getZ(), pos2.getZ());
         double maxZ = Math.max(pos1.getZ(), pos2.getZ());
 
-        // Отображаем частицы вдоль границ
         for (double x = minX; x <= maxX; x += 0.5) {
             for (double y = minY; y <= maxY; y += 0.5) {
                 player.getLevel().addParticle(new DustParticle(new Vector3(x, y, minZ), 255, 255, 255));
@@ -185,19 +182,19 @@ public class Main extends PluginBase implements Listener {
 
     private static class Region {
         private final String name;
-        private final Position pos1;
-        private final Position pos2;
+        private final Location pos1;
+        private final Location pos2;
 
-        public Region(String name, Position pos1, Position pos2) {
+        public Region(String name, Location pos1, Location pos2) {
             this.name = name;
             this.pos1 = pos1;
             this.pos2 = pos2;
         }
 
-        public boolean contains(Position position) {
-            double x = position.getX();
-            double y = position.getY();
-            double z = position.getZ();
+        public boolean contains(Location location) {
+            double x = location.getX();
+            double y = location.getY();
+            double z = location.getZ();
 
             double minX = Math.min(pos1.getX(), pos2.getX());
             double maxX = Math.max(pos1.getX(), pos2.getX());
