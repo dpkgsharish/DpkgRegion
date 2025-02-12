@@ -28,66 +28,7 @@ public class Main extends PluginBase implements Listener {
     @Override
     public void onEnable() {
         getServer().getPluginManager().registerEvents(this, this);
-        getLogger().info(TextFormat.GREEN + "DpkgRegion has been enabled!");
-    }
-
-    @Override
-    public void onDisable() {
-        getLogger().info(TextFormat.RED + "DpkgRegion has been disabled!");
-    }
-
-    @EventHandler
-    public void onInteract(PlayerInteractEvent event) {
-        Player player = event.getPlayer();
-        if (creatingRegions.containsKey(player)) {
-            if (event.getAction() == PlayerInteractEvent.Action.LEFT_CLICK_BLOCK) {
-                pos1Map.put(player, event.getBlock().getLocation());
-                player.sendMessage(TextFormat.GREEN + "Position 1 set: " + event.getBlock().getLocation());
-                event.setCancelled(true);
-            } else if (event.getAction() == PlayerInteractEvent.Action.RIGHT_CLICK_BLOCK) {
-                pos2Map.put(player, event.getBlock().getLocation());
-                player.sendMessage(TextFormat.GREEN + "Position 2 set: " + event.getBlock().getLocation());
-                event.setCancelled(true);
-
-                if (pos1Map.containsKey(player) && pos2Map.containsKey(player)) {
-                    showRegionBoundaries(player, pos1Map.get(player), pos2Map.get(player));
-                }
-            }
-        }
-    }
-
-    @EventHandler
-    public void onSneak(PlayerToggleSneakEvent event) {
-        Player player = event.getPlayer();
-        if (creatingRegions.containsKey(player)) {
-            if (event.isSneaking()) {
-                if (pos1Map.containsKey(player) && pos2Map.containsKey(player)) {
-                    createRegion(player, creatingRegions.get(player));
-                    creatingRegions.remove(player);
-                    player.sendMessage(TextFormat.GREEN + "Region created!");
-                } else {
-                    player.sendMessage(TextFormat.RED + "Please set both positions first!");
-                }
-            }
-        }
-    }
-
-    @EventHandler
-    public void onBlockBreak(BlockBreakEvent event) {
-        Player player = event.getPlayer();
-        if (!canBuild(player, event.getBlock().getLocation())) {
-            event.setCancelled(true);
-            player.sendMessage(TextFormat.RED + "You cannot break blocks in this region!");
-        }
-    }
-
-    @EventHandler
-    public void onBlockPlace(BlockPlaceEvent event) {
-        Player player = event.getPlayer();
-        if (!canBuild(player, event.getBlock().getLocation())) {
-            event.setCancelled(true);
-            player.sendMessage(TextFormat.RED + "You cannot place blocks in this region!");
-        }
+        getLogger().info(TextFormat.GREEN + "DpkgRegion enabled!");
     }
 
     @Override
@@ -123,14 +64,72 @@ public class Main extends PluginBase implements Listener {
         return true;
     }
 
+    @EventHandler
+    public void onInteract(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
+        if (creatingRegions.containsKey(player)) {
+            if (event.getAction() == PlayerInteractEvent.Action.LEFT_CLICK_BLOCK) {
+                pos1Map.put(player, event.getBlock().getLocation());
+                player.sendMessage(TextFormat.GREEN + "Position 1 set: " + formatLocation(event.getBlock().getLocation()));
+                event.setCancelled(true);
+            } else if (event.getAction() == PlayerInteractEvent.Action.RIGHT_CLICK_BLOCK) {
+                pos2Map.put(player, event.getBlock().getLocation());
+                player.sendMessage(TextFormat.GREEN + "Position 2 set: " + formatLocation(event.getBlock().getLocation()));
+                event.setCancelled(true);
+
+                if (pos1Map.containsKey(player) && pos2Map.containsKey(player)) {
+                    showRegionBoundaries(player, pos1Map.get(player), pos2Map.get(player));
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onSneak(PlayerToggleSneakEvent event) {
+        Player player = event.getPlayer();
+        if (creatingRegions.containsKey(player)) {
+            if (event.isSneaking()) {
+                if (pos1Map.containsKey(player) && pos2Map.containsKey(player)) {
+                    Location pos1 = pos1Map.get(player);
+                    Location pos2 = pos2Map.get(player);
+
+                    double volume = Math.abs(pos1.getX() - pos2.getX()) * Math.abs(pos1.getY() - pos2.getY()) * Math.abs(pos1.getZ() - pos2.getZ());
+                    if (!player.isOp() && volume > 1000) {
+                        player.sendMessage(TextFormat.RED + "Region volume exceeds 1000 blocks!");
+                        return;
+                    }
+
+                    createRegion(player, creatingRegions.get(player));
+                    creatingRegions.remove(player);
+                    player.sendMessage(TextFormat.GREEN + "Region created!");
+                } else {
+                    player.sendMessage(TextFormat.RED + "Please set both positions first!");
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent event) {
+        Player player = event.getPlayer();
+        if (!canBuild(player, event.getBlock().getLocation())) {
+            event.setCancelled(true);
+            player.sendMessage(TextFormat.RED + "You cannot break blocks in this region!");
+        }
+    }
+
+    @EventHandler
+    public void onBlockPlace(BlockPlaceEvent event) {
+        Player player = event.getPlayer();
+        if (!canBuild(player, event.getBlock().getLocation())) {
+            event.setCancelled(true);
+            player.sendMessage(TextFormat.RED + "You cannot place blocks in this region!");
+        }
+    }
+
     private void createRegion(Player player, String name) {
         Location pos1 = pos1Map.get(player);
         Location pos2 = pos2Map.get(player);
-
-        if (pos1 == null || pos2 == null) {
-            player.sendMessage(TextFormat.RED + "Please set both positions first!");
-            return;
-        }
 
         regions.put(name, new Region(name, pos1, pos2));
         player.sendMessage(TextFormat.GREEN + "Region created: " + name);
@@ -178,6 +177,10 @@ public class Main extends PluginBase implements Listener {
                 player.getLevel().addParticle(new DustParticle(new Vector3(x, maxY, z), 255, 255, 255));
             }
         }
+    }
+
+    private String formatLocation(Location location) {
+        return String.format("X: %.1f, Y: %.1f, Z: %.1f", location.getX(), location.getY(), location.getZ());
     }
 
     private static class Region {

@@ -10,4 +10,4 @@ commands:
 permissions:
   dpkgregion.command.rg:
     description: Allows usage of the /rg command.
-    default: op
+    default: true
